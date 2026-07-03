@@ -373,10 +373,16 @@ def tagset_delete():
     
     #Check that no games have been played with this tag_set. If any cannot delete
     any_game_history = GameHistory.query.filter_by(tag_set_id=tag_set.id).first()
-    
+
     if any_game_history:
         return abort(412, description='Could not delete, games have been played')
-    
+
+    #Check that tag_set is not a draft league (league tables reference the tag_set)
+    league_settings = LeagueSettings.query.filter_by(tag_set_id=tag_set.id).first()
+
+    if league_settings:
+        return abort(412, description='Could not delete, tag_set is a draft league')
+
     #Else, delete tag_set and tag
     tag = Tag.query.filter_by(name_lowercase=lower_and_remove_nonalphanumeric(in_tag_set_name)).first()
 
@@ -411,8 +417,14 @@ def tagset_delete_all():
     for tag_set in tag_sets:
         #Check that no games have been played with this tag_set. If any cannot delete
         any_game_history = GameHistory.query.filter_by(tag_set_id=tag_set.id).first()
-        
+
         if any_game_history:
+            continue
+
+        #Skip draft leagues (league tables reference the tag_set)
+        league_settings = LeagueSettings.query.filter_by(tag_set_id=tag_set.id).first()
+
+        if league_settings:
             continue
 
         comm = Community.query.filter_by(id=tag_set.community_id).first()

@@ -598,4 +598,124 @@ def game_exists(game_id):
     params = (str(game_id),)
     result = db.query(query, params)
 
-    return len(result) == 1    
+    return len(result) == 1
+
+class DraftLeague:
+    """Wrapper for the /league/ endpoints. Creates league settings on init;
+    all other methods return the raw requests.Response so tests can assert
+    status codes and inspect JSON."""
+    def __init__(self, admin_user, community, tagset, roster_min=9, roster_max=12,
+                 require_move_approval=False, require_trade_approval=False):
+        self.community = community
+        self.tag_set_id = tagset.pk
+        self.response = requests.post(f"{BASE_URL}/league/settings/create", json={
+            'tag_set_id': self.tag_set_id,
+            'roster_min': roster_min,
+            'roster_max': roster_max,
+            'require_move_approval': 1 if require_move_approval else 0,
+            'require_trade_approval': 1 if require_trade_approval else 0,
+            'rio_key': admin_user.rk})
+        self.success = (self.response.status_code == 200)
+
+    def _post(self, endpoint, user, json_body):
+        if user != None:
+            json_body['rio_key'] = user.rk
+        return requests.post(f"{BASE_URL}{endpoint}", json=json_body)
+
+    # === Settings ===
+    def update_settings(self, user, **fields):
+        return self._post('/league/settings/update', user, {'tag_set_id': self.tag_set_id, **fields})
+
+    def get_settings(self, user=None):
+        return self._post('/league/settings/get', user, {'tag_set_id': self.tag_set_id})
+
+    # === Character pool ===
+    def create_pool(self, user, characters):
+        return self._post('/league/character/create', user, {'tag_set_id': self.tag_set_id, 'characters': characters})
+
+    def update_character(self, user, league_character_id, **fields):
+        return self._post('/league/character/update', user, {'league_character_id': league_character_id, **fields})
+
+    def delete_character(self, user, league_character_id):
+        return self._post('/league/character/delete', user, {'league_character_id': league_character_id})
+
+    def list_characters(self, user=None, **filters):
+        return self._post('/league/character/list', user, {'tag_set_id': self.tag_set_id, **filters})
+
+    # === Teams ===
+    def create_team(self, user, name, **fields):
+        return self._post('/league/team/create', user, {'tag_set_id': self.tag_set_id, 'name': name, **fields})
+
+    def update_team(self, user, team_id, **fields):
+        return self._post('/league/team/update', user, {'team_id': team_id, **fields})
+
+    def delete_team(self, user, team_id):
+        return self._post('/league/team/delete', user, {'team_id': team_id})
+
+    def get_team(self, user=None, **selector):
+        if 'team_id' not in selector:
+            selector['tag_set_id'] = self.tag_set_id
+        return self._post('/league/team/get', user, selector)
+
+    def list_teams(self, user=None):
+        return self._post('/league/team/list', user, {'tag_set_id': self.tag_set_id})
+
+    # === Lineups ===
+    def create_lineup(self, user, team_id, name, slots, is_default=False):
+        return self._post('/league/lineup/create', user, {'team_id': team_id, 'name': name,
+                                                          'slots': slots, 'is_default': 1 if is_default else 0})
+
+    def update_lineup(self, user, lineup_id, **fields):
+        return self._post('/league/lineup/update', user, {'lineup_id': lineup_id, **fields})
+
+    def delete_lineup(self, user, lineup_id):
+        return self._post('/league/lineup/delete', user, {'lineup_id': lineup_id})
+
+    def set_default_lineup(self, user, lineup_id):
+        return self._post('/league/lineup/set_default', user, {'lineup_id': lineup_id})
+
+    # === Roster moves ===
+    def roster_add(self, user, team_id, league_character_id):
+        return self._post('/league/roster/add', user, {'team_id': team_id, 'league_character_id': league_character_id})
+
+    def roster_drop(self, user, team_id, league_character_id):
+        return self._post('/league/roster/drop', user, {'team_id': team_id, 'league_character_id': league_character_id})
+
+    def list_moves(self, user=None, **filters):
+        return self._post('/league/move/list', user, {'tag_set_id': self.tag_set_id, **filters})
+
+    def respond_move(self, user, move_id, accept):
+        return self._post('/league/move/respond', user, {'move_id': move_id, 'accept': 1 if accept else 0})
+
+    def cancel_move(self, user, move_id):
+        return self._post('/league/move/cancel', user, {'move_id': move_id})
+
+    # === Trades ===
+    def propose_trade(self, user, from_team_id, to_team_id, from_items, to_items, execute=False):
+        json_body = {'from_team_id': from_team_id, 'to_team_id': to_team_id,
+                     'from_items': from_items, 'to_items': to_items}
+        if execute:
+            json_body['execute'] = 1
+        return self._post('/league/trade/propose', user, json_body)
+
+    def respond_trade(self, user, trade_id, accept):
+        return self._post('/league/trade/respond', user, {'trade_id': trade_id, 'accept': 1 if accept else 0})
+
+    def cancel_trade(self, user, trade_id):
+        return self._post('/league/trade/cancel', user, {'trade_id': trade_id})
+
+    def execute_trade(self, user, trade_id):
+        return self._post('/league/trade/execute', user, {'trade_id': trade_id})
+
+    def veto_trade(self, user, trade_id):
+        return self._post('/league/trade/veto', user, {'trade_id': trade_id})
+
+    def list_trades(self, user=None, **filters):
+        return self._post('/league/trade/list', user, {'tag_set_id': self.tag_set_id, **filters})
+
+    # === Mod-facing game load ===
+    def game_load(self, usernames, rio_key=None):
+        params = [('tag_set_id', self.tag_set_id)] + [('username', username) for username in usernames]
+        if rio_key != None:
+            params.append(('rio_key', rio_key))
+        return requests.get(f"{BASE_URL}/league/game_load", params=params)

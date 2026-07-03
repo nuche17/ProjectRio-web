@@ -794,3 +794,300 @@ class UserIpAddress(db.Model):
         self.ip_address = ip_address
         self.use_count = 0
         self.last_use_date = int(time.time())
+
+class LeagueSettings(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    tag_set_id = db.Column(db.Integer, db.ForeignKey('tag_set.id'), unique=True, nullable=False)
+    roster_min = db.Column(db.Integer)
+    roster_max = db.Column(db.Integer)
+    require_move_approval = db.Column(db.Boolean)
+    require_trade_approval = db.Column(db.Boolean)
+    date_created = db.Column(db.Integer)
+
+    tag_set = db.relationship('TagSet', backref='league_settings')
+
+    def __init__(self, in_tag_set_id, in_roster_min, in_roster_max, in_require_move_approval, in_require_trade_approval):
+        self.tag_set_id = in_tag_set_id
+        self.roster_min = in_roster_min
+        self.roster_max = in_roster_max
+        self.require_move_approval = in_require_move_approval
+        self.require_trade_approval = in_require_trade_approval
+        self.date_created = int( time.time() )
+
+    def to_dict(self):
+        ret_dict = {
+            'id': self.id,
+            'tag_set_id': self.tag_set_id,
+            'roster_min': self.roster_min,
+            'roster_max': self.roster_max,
+            'require_move_approval': self.require_move_approval,
+            'require_trade_approval': self.require_trade_approval,
+            'date_created': self.date_created
+        }
+        return ret_dict
+
+class LeagueTeam(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    tag_set_id = db.Column(db.Integer, db.ForeignKey('tag_set.id'), nullable=False)
+    community_user_id = db.Column(db.Integer, db.ForeignKey('community_user.id'), nullable=False)
+    name = db.Column(db.String(100))
+    name_lowercase = db.Column(db.String(100))
+    logo_id = db.Column(db.Integer, nullable=True)
+    stadium_id = db.Column(db.Integer, nullable=True)
+    # Circular FK with LeagueCharacter.league_team_id, use_alter breaks the create_all cycle
+    captain_league_character_id = db.Column(db.Integer,
+        db.ForeignKey('league_character.id', use_alter=True, name='fk_league_team_captain_league_character'),
+        nullable=True)
+    date_created = db.Column(db.Integer)
+
+    __table_args__ = (
+        db.UniqueConstraint('tag_set_id', 'community_user_id', name='league_team_tag_set_id_community_user_id_key'),
+        db.UniqueConstraint('tag_set_id', 'name_lowercase', name='league_team_tag_set_id_name_lowercase_key'),
+    )
+
+    community_user = db.relationship('CommunityUser', backref='league_teams')
+    roster = db.relationship('LeagueCharacter', foreign_keys='LeagueCharacter.league_team_id', backref='league_team')
+    lineups = db.relationship('LeagueLineup', backref='league_team')
+    captain_character = db.relationship('LeagueCharacter', foreign_keys='LeagueTeam.captain_league_character_id')
+
+    def __init__(self, in_tag_set_id, in_comm_user_id, in_name, in_logo_id, in_stadium_id):
+        self.tag_set_id = in_tag_set_id
+        self.community_user_id = in_comm_user_id
+        self.name = in_name
+        self.name_lowercase = lower_and_remove_nonalphanumeric(in_name)
+        self.logo_id = in_logo_id
+        self.stadium_id = in_stadium_id
+        self.date_created = int( time.time() )
+
+    def to_dict(self, include_roster=False, include_lineups=False):
+        ret_dict = {
+            'id': self.id,
+            'tag_set_id': self.tag_set_id,
+            'community_user_id': self.community_user_id,
+            'name': self.name,
+            'logo_id': self.logo_id,
+            'stadium_id': self.stadium_id,
+            'captain_league_character_id': self.captain_league_character_id,
+            'date_created': self.date_created
+        }
+        if (include_roster):
+            ret_dict['roster'] = [league_character.to_dict() for league_character in self.roster]
+        if (include_lineups):
+            ret_dict['lineups'] = [lineup.to_dict() for lineup in self.lineups]
+        return ret_dict
+
+class LeagueCharacter(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    tag_set_id = db.Column(db.Integer, db.ForeignKey('tag_set.id'), nullable=False)
+    char_id = db.Column(db.Integer, db.ForeignKey('character.char_id'), nullable=False)
+    copy_num = db.Column(db.Integer, nullable=False) #1-based, "Mario-2" = copy_num 2
+    league_team_id = db.Column(db.Integer, db.ForeignKey('league_team.id'), nullable=True) #NULL = free agent
+    batting_hand = db.Column(db.Integer) #cHANDEDNESS (righty:0, lefty:1)
+    fielding_hand = db.Column(db.Integer) #cHANDEDNESS (righty:0, lefty:1)
+    superstar = db.Column(db.Boolean)
+    value = db.Column(db.Integer, nullable=True)
+
+    __table_args__ = (
+        db.UniqueConstraint('tag_set_id', 'char_id', 'copy_num', name='league_character_tag_set_id_char_id_copy_num_key'),
+    )
+
+    character = db.relationship('Character', backref='league_characters')
+
+    def __init__(self, in_tag_set_id, in_char_id, in_copy_num, in_batting_hand, in_fielding_hand, in_superstar, in_value):
+        self.tag_set_id = in_tag_set_id
+        self.char_id = in_char_id
+        self.copy_num = in_copy_num
+        self.batting_hand = in_batting_hand
+        self.fielding_hand = in_fielding_hand
+        self.superstar = in_superstar
+        self.value = in_value
+
+    def to_dict(self):
+        ret_dict = {
+            'id': self.id,
+            'tag_set_id': self.tag_set_id,
+            'char_id': self.char_id,
+            'char_name': self.character.name,
+            'copy_num': self.copy_num,
+            'team_id': self.league_team_id,
+            'batting_hand': self.batting_hand,
+            'fielding_hand': self.fielding_hand,
+            'superstar': self.superstar,
+            'value': self.value,
+            'captain_eligible': (self.character.captain == 1)
+        }
+        return ret_dict
+
+class LeagueLineup(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    league_team_id = db.Column(db.Integer, db.ForeignKey('league_team.id'), nullable=False)
+    name = db.Column(db.String(100))
+    name_lowercase = db.Column(db.String(100))
+    is_default = db.Column(db.Boolean)
+    date_created = db.Column(db.Integer)
+
+    __table_args__ = (
+        db.UniqueConstraint('league_team_id', 'name_lowercase', name='league_lineup_league_team_id_name_lowercase_key'),
+    )
+
+    slots = db.relationship('LeagueLineupSlot', backref='league_lineup', cascade='all, delete-orphan')
+
+    def __init__(self, in_league_team_id, in_name, in_is_default):
+        self.league_team_id = in_league_team_id
+        self.name = in_name
+        self.name_lowercase = lower_and_remove_nonalphanumeric(in_name)
+        self.is_default = in_is_default
+        self.date_created = int( time.time() )
+
+    def to_dict(self):
+        ret_dict = {
+            'id': self.id,
+            'team_id': self.league_team_id,
+            'name': self.name,
+            'is_default': self.is_default,
+            'date_created': self.date_created,
+            'slots': [slot.to_dict() for slot in sorted(self.slots, key=lambda slot: slot.batting_order)]
+        }
+        return ret_dict
+
+class LeagueLineupSlot(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    league_lineup_id = db.Column(db.Integer, db.ForeignKey('league_lineup.id'), nullable=False)
+    league_character_id = db.Column(db.Integer, db.ForeignKey('league_character.id'), nullable=False)
+    batting_order = db.Column(db.Integer) #0-8, matches roster_loc convention
+    fielding_pos = db.Column(db.Integer) #cFIELDING_POSITIONS (0-8 = P,C,1B,2B,3B,SS,LF,CF,RF)
+    # Per-lineup overrides. NULL = inherit from the LeagueCharacter instance
+    batting_hand = db.Column(db.Integer, nullable=True)
+    fielding_hand = db.Column(db.Integer, nullable=True)
+    superstar = db.Column(db.Boolean, nullable=True)
+
+    __table_args__ = (
+        db.UniqueConstraint('league_lineup_id', 'batting_order', name='league_lineup_slot_lineup_batting_order_key'),
+        db.UniqueConstraint('league_lineup_id', 'fielding_pos', name='league_lineup_slot_lineup_fielding_pos_key'),
+        db.UniqueConstraint('league_lineup_id', 'league_character_id', name='league_lineup_slot_lineup_character_key'),
+    )
+
+    league_character = db.relationship('LeagueCharacter', backref='lineup_slots')
+
+    def __init__(self, in_league_lineup_id, in_league_character_id, in_batting_order, in_fielding_pos,
+                 in_batting_hand=None, in_fielding_hand=None, in_superstar=None):
+        self.league_lineup_id = in_league_lineup_id
+        self.league_character_id = in_league_character_id
+        self.batting_order = in_batting_order
+        self.fielding_pos = in_fielding_pos
+        self.batting_hand = in_batting_hand
+        self.fielding_hand = in_fielding_hand
+        self.superstar = in_superstar
+
+    def to_dict(self):
+        league_character = self.league_character
+        ret_dict = {
+            'id': self.id,
+            'league_character_id': self.league_character_id,
+            'char_id': league_character.char_id,
+            'char_name': league_character.character.name,
+            'copy_num': league_character.copy_num,
+            'batting_order': self.batting_order,
+            'fielding_pos': self.fielding_pos,
+            'batting_hand': self.batting_hand if self.batting_hand != None else league_character.batting_hand,
+            'fielding_hand': self.fielding_hand if self.fielding_hand != None else league_character.fielding_hand,
+            'superstar': self.superstar if self.superstar != None else league_character.superstar
+        }
+        return ret_dict
+
+class LeagueTrade(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    tag_set_id = db.Column(db.Integer, db.ForeignKey('tag_set.id'), nullable=False)
+    from_team_id = db.Column(db.Integer, db.ForeignKey('league_team.id'), nullable=False) #Proposing team
+    to_team_id = db.Column(db.Integer, db.ForeignKey('league_team.id'), nullable=False)
+    status = db.Column(db.String(20)) #cTRADE_STATES value
+    date_created = db.Column(db.Integer)
+    date_resolved = db.Column(db.Integer, nullable=True)
+    resolved_by_comm_user_id = db.Column(db.Integer, db.ForeignKey('community_user.id'), nullable=True)
+
+    items = db.relationship('LeagueTradeItem', backref='league_trade')
+
+    def __init__(self, in_tag_set_id, in_from_team_id, in_to_team_id):
+        self.tag_set_id = in_tag_set_id
+        self.from_team_id = in_from_team_id
+        self.to_team_id = in_to_team_id
+        self.status = 'Proposed'
+        self.date_created = int( time.time() )
+
+    def to_dict(self):
+        from_items = [item.to_dict() for item in self.items if item.from_team_id == self.from_team_id]
+        to_items = [item.to_dict() for item in self.items if item.from_team_id == self.to_team_id]
+        ret_dict = {
+            'id': self.id,
+            'tag_set_id': self.tag_set_id,
+            'from_team_id': self.from_team_id,
+            'to_team_id': self.to_team_id,
+            'status': self.status,
+            'date_created': self.date_created,
+            'date_resolved': self.date_resolved,
+            'resolved_by_comm_user_id': self.resolved_by_comm_user_id,
+            'from_items': from_items,
+            'to_items': to_items
+        }
+        return ret_dict
+
+class LeagueTradeItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    league_trade_id = db.Column(db.Integer, db.ForeignKey('league_trade.id'), nullable=False)
+    league_character_id = db.Column(db.Integer, db.ForeignKey('league_character.id'), nullable=False)
+    from_team_id = db.Column(db.Integer, db.ForeignKey('league_team.id'), nullable=False) #Side giving this item
+
+    league_character = db.relationship('LeagueCharacter', backref='trade_items')
+
+    def __init__(self, in_league_trade_id, in_league_character_id, in_from_team_id):
+        self.league_trade_id = in_league_trade_id
+        self.league_character_id = in_league_character_id
+        self.from_team_id = in_from_team_id
+
+    def to_dict(self):
+        ret_dict = {
+            'id': self.id,
+            'league_character_id': self.league_character_id,
+            'char_id': self.league_character.char_id,
+            'char_name': self.league_character.character.name,
+            'copy_num': self.league_character.copy_num,
+            'from_team_id': self.from_team_id
+        }
+        return ret_dict
+
+class LeagueMove(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    tag_set_id = db.Column(db.Integer, db.ForeignKey('tag_set.id'), nullable=False)
+    league_team_id = db.Column(db.Integer, db.ForeignKey('league_team.id'), nullable=False)
+    league_character_id = db.Column(db.Integer, db.ForeignKey('league_character.id'), nullable=False)
+    move_type = db.Column(db.String(10)) #cMOVE_TYPES value
+    status = db.Column(db.String(20)) #cMOVE_STATES value
+    date_created = db.Column(db.Integer)
+    date_resolved = db.Column(db.Integer, nullable=True)
+    resolved_by_comm_user_id = db.Column(db.Integer, db.ForeignKey('community_user.id'), nullable=True)
+
+    league_character = db.relationship('LeagueCharacter', backref='moves')
+
+    def __init__(self, in_tag_set_id, in_league_team_id, in_league_character_id, in_move_type):
+        self.tag_set_id = in_tag_set_id
+        self.league_team_id = in_league_team_id
+        self.league_character_id = in_league_character_id
+        self.move_type = in_move_type
+        self.status = 'Pending'
+        self.date_created = int( time.time() )
+
+    def to_dict(self):
+        ret_dict = {
+            'id': self.id,
+            'tag_set_id': self.tag_set_id,
+            'team_id': self.league_team_id,
+            'league_character_id': self.league_character_id,
+            'char_name': self.league_character.character.name,
+            'copy_num': self.league_character.copy_num,
+            'move_type': self.move_type,
+            'status': self.status,
+            'date_created': self.date_created,
+            'date_resolved': self.date_resolved,
+            'resolved_by_comm_user_id': self.resolved_by_comm_user_id
+        }
+        return ret_dict

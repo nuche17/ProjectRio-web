@@ -59,6 +59,7 @@ def init_app():
         from .views import user_groups
         from .views import community
         from .views import tag
+        from .views import league
         from .views import sql_exec
         from .views import reverify_emails
         from .views import db_manage

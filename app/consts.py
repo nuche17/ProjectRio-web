@@ -274,3 +274,99 @@ cCHAR_ALIASES = {
     "B!Bro": 54,
     "BBro": 54,
 }
+
+# Matches the game's stadium ID enum
+cSTADIUMS = {
+    0: "Mario Stadium",
+    1: "Bowser Castle",
+    2: "Wario Palace",
+    3: "Yoshi Park",
+    4: "Peach Garden",
+    5: "DK Jungle",
+    6: "Toy Field",
+}
+
+# Matches the game's logo ID enum
+cTEAM_LOGOS = {
+    0: "Mario Sunshines",
+    1: "Mario All Stars",
+    2: "Mario Fireballs",
+    3: "Mario Heroes",
+    4: "Luigi Mansioneers",
+    5: "Luigi Leapers",
+    6: "Luigi Vacuums",
+    7: "Luigi Gentlemen",
+    8: "Peach Monarchs",
+    9: "Peach Princesses",
+    10: "Peach Dynasties",
+    11: "Peach Roses",
+    12: "Daisy Queen Bees",
+    13: "Daisy Petals",
+    14: "Daisy Cupids",
+    15: "Daisy Lillies",
+    16: "Yoshi Islanders",
+    17: "Yoshi Flutters",
+    18: "Yoshi Speed Stars",
+    19: "Yoshi Eggs",
+    20: "Birdo Bows",
+    21: "Birdo Fans",
+    22: "Birdo Models",
+    23: "Birdo Beauties",
+    24: "Wario Greats",
+    25: "Wario Beasts",
+    26: "Wario Steakheads",
+    27: "Wario Garlics",
+    28: "Waluigi Flankers",
+    29: "Waluigi Mashers",
+    30: "Waluigi Smart Alecks",
+    31: "Waluigi Mystiques",
+    32: "DK Kongs",
+    33: "DK Animals",
+    34: "DK Wild Ones",
+    35: "DK Explorers",
+    36: "Diddy Tails",
+    37: "Diddy Red Caps",
+    38: "Diddy Ninjas",
+    39: "Diddy Survivors",
+    40: "Bowser Monsters",
+    41: "Bowser Black Stars",
+    42: "Bowser Blue Shells",
+    43: "Bowser Flames",
+    44: "Jr Pixies",
+    45: "Jr Rookies",
+    46: "Jr Bombers",
+    47: "Jr Fangs",
+}
+
+cTRADE_STATES = {
+    0: "Proposed",
+    1: "Accepted",
+    2: "Rejected",
+    3: "Cancelled",
+    4: "Executed",
+    5: "Vetoed",
+}
+
+cMOVE_TYPES = {
+    0: "Add",
+    1: "Drop",
+}
+
+cMOVE_STATES = {
+    0: "Pending",
+    1: "Executed",
+    2: "Rejected",
+    3: "Cancelled",
+}
+
+cFIELDING_POSITIONS = {
+    0: "P",
+    1: "C",
+    2: "1B",
+    3: "2B",
+    4: "3B",
+    5: "SS",
+    6: "LF",
+    7: "CF",
+    8: "RF",
+}
