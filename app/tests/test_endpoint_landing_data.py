@@ -78,6 +78,13 @@ class TestResponseShape:
         for row in sample_landing_data:
             assert expected <= set(row.keys()), f'Missing {expected - set(row.keys())}'
 
+    def test_rows_carry_superstar_star_and_fielder_fields(self, server, base_url, sample_landing_data):
+        expected = {'batter_superstar', 'pitcher_superstar', 'batter_team_stars',
+                    'fielder_action', 'fielder_jump'}
+        for row in sample_landing_data:
+            assert expected <= set(row.keys()), f'Missing {expected - set(row.keys())}'
+            assert 0 <= row['batter_team_stars'] <= 5
+
     def test_empty_filters_with_no_matching_events_returns_empty(self, server, base_url, sample_game):
         # inning=49 is valid (cMAX_INNING=50) but virtually never occurs → empty result
         r = server.get(f'{base_url}/landing_data/', params={
