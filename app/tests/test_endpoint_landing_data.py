@@ -80,7 +80,7 @@ class TestResponseShape:
 
     def test_rows_carry_superstar_star_and_fielder_fields(self, server, base_url, sample_landing_data):
         expected = {'batter_superstar', 'pitcher_superstar', 'batter_team_stars',
-                    'fielder_action', 'fielder_jump'}
+                    'fielder_action', 'fielder_jump', 'pitcher_stamina'}
         for row in sample_landing_data:
             assert expected <= set(row.keys()), f'Missing {expected - set(row.keys())}'
             assert 0 <= row['batter_team_stars'] <= 5

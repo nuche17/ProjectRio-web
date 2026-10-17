@@ -330,6 +330,7 @@ Please read the [FAQ](#faq) before using the Api.
 		"manual_select_state": 0,
 		"pitch_type": 1,
 		"pitcher_char_id": 28,
+		"pitcher_stamina": 9,
 		"pitcher_superstar": false,
 		"pitcher_username": "duckydonne",
 		"rng1": 13017.0,

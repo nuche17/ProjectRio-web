@@ -526,6 +526,7 @@ def endpoint_landing_data():
         'event.event_num AS event_num, \n'
         'event.result_of_ab AS final_result, \n'
         'event.chem_links_ob AS chem_links_ob, \n'
+        'event.pitcher_stamina AS pitcher_stamina, \n'
         'CASE WHEN event.half_inning = 0 THEN event.away_stars ELSE event.home_stars END AS batter_team_stars, \n'
         'batter.char_id AS batter_char_id, \n'
         'pitcher.char_id AS pitcher_char_id, \n'
