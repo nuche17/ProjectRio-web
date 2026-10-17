@@ -557,8 +557,12 @@ def endpoint_landing_data():
         'fielding.fielder_y_pos AS fielder_y_pos, \n'
         'fielding.fielder_z_pos AS fielder_z_pos, \n'
         'fielding.jump AS fielder_jump, \n'
-        'fielding.manual_select AS manual_select_state \n'
+        'fielding.manual_select AS manual_select_state, \n'
+        'game.stadium_id AS stadium, \n'
+        'game_history.tag_set_id AS tag_set \n'
         'FROM event \n'
+        'JOIN game ON event.game_id = game.game_id \n'
+        'LEFT JOIN game_history ON event.game_id = game_history.game_id \n'      #Left join for games without a tag set
         'JOIN pitch_summary AS pitch ON event.pitch_summary_id = pitch.id \n'
         'JOIN contact_summary AS contact ON pitch.contact_summary_id = contact.id \n'
         'LEFT JOIN fielding_summary AS fielding ON contact.fielding_summary_id = fielding.id \n'

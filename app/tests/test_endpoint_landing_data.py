@@ -85,6 +85,11 @@ class TestResponseShape:
             assert expected <= set(row.keys()), f'Missing {expected - set(row.keys())}'
             assert 0 <= row['batter_team_stars'] <= 5
 
+    def test_rows_carry_stadium_and_tag_set(self, server, base_url, sample_landing_data):
+        for row in sample_landing_data:
+            assert {'stadium', 'tag_set'} <= set(row.keys())
+            assert row['tag_set'] is not None  # S13 games are ranked, so they have game_history
+
     def test_empty_filters_with_no_matching_events_returns_empty(self, server, base_url, sample_game):
         # inning=49 is valid (cMAX_INNING=50) but virtually never occurs → empty result
         r = server.get(f'{base_url}/landing_data/', params={
