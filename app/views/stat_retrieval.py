@@ -507,6 +507,19 @@ def endpoint_landing_data():
     if event_empty:
         return {}
 
+    # Stadium and tag set need the game/game_history joins, so they are opt-in.
+    game_info_select = ''
+    game_info_join = ''
+    if request.args.get('include_game_info') == '1':
+        game_info_select = (
+            ', game.stadium_id AS stadium, \n'
+            'game_history.tag_set_id AS tag_set \n'
+        )
+        game_info_join = (
+            'JOIN game ON event.game_id = game.game_id \n'
+            'LEFT JOIN game_history ON event.game_id = game_history.game_id \n'      #Left join for games without a tag set
+        )
+
     query = (
         'SELECT \n'
         'event.game_id AS game_id, \n'
@@ -557,12 +570,10 @@ def endpoint_landing_data():
         'fielding.fielder_y_pos AS fielder_y_pos, \n'
         'fielding.fielder_z_pos AS fielder_z_pos, \n'
         'fielding.jump AS fielder_jump, \n'
-        'fielding.manual_select AS manual_select_state, \n'
-        'game.stadium_id AS stadium, \n'
-        'game_history.tag_set_id AS tag_set \n'
+        'fielding.manual_select AS manual_select_state \n'
+       f'{game_info_select}'
         'FROM event \n'
-        'JOIN game ON event.game_id = game.game_id \n'
-        'LEFT JOIN game_history ON event.game_id = game_history.game_id \n'      #Left join for games without a tag set
+       f'{game_info_join}'
         'JOIN pitch_summary AS pitch ON event.pitch_summary_id = pitch.id \n'
         'JOIN contact_summary AS contact ON pitch.contact_summary_id = contact.id \n'
         'LEFT JOIN fielding_summary AS fielding ON contact.fielding_summary_id = fielding.id \n'

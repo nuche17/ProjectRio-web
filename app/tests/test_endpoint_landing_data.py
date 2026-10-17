@@ -85,8 +85,18 @@ class TestResponseShape:
             assert expected <= set(row.keys()), f'Missing {expected - set(row.keys())}'
             assert 0 <= row['batter_team_stars'] <= 5
 
-    def test_rows_carry_stadium_and_tag_set(self, server, base_url, sample_landing_data):
+    def test_stadium_and_tag_set_omitted_by_default(self, server, base_url, sample_landing_data):
         for row in sample_landing_data:
+            assert not ({'stadium', 'tag_set'} & set(row.keys()))
+
+    def test_include_game_info_adds_stadium_and_tag_set(self, server, base_url):
+        r = server.get(f'{base_url}/landing_data/', params={
+            'tag': S13_TAG, 'limit_games': '1', 'include_game_info': '1',
+        })
+        assert r.status_code == 200
+        data = r.json().get('Data', [])
+        assert data
+        for row in data:
             assert {'stadium', 'tag_set'} <= set(row.keys())
             assert row['tag_set'] is not None  # S13 games are ranked, so they have game_history
 
